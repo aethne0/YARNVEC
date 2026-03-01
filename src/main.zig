@@ -3,6 +3,10 @@ const std = @import("std");
 const V3 = @import("root.zig").Vector3;
 const M44 = @import("root.zig").Matrix44;
 
+const raylib = @cImport({
+    @cInclude("raylib.h");
+});
+
 pub const FastPrng = struct {
     s: [4]u32,
 
