@@ -1,8 +1,8 @@
-//! ▄▄▄   ▄▄▄· ▄ .▄ ▄· ▄▌.▄▄ · 
-//! ▀▄ █·▐█ ▄███▪▐█▐█▪██▌▐█ ▀. 
-//! ▐▀▀▄  ██▀·██▀▐█▐█▌▐█▪▄▀▀▀█▄
-//! ▐█•█▌▐█▪·•██▌▐▀ ▐█▀·.▐█▄▪▐█
-//! .▀  ▀.▀   ▀▀▀ ·  ▀ •  ▀▀▀▀
+//!  ▄· ▄▌ ▄▄▄· ▄▄▄   ▐ ▄  ▌ ▐·▄▄▄ . ▄▄· 
+//! ▐█▪██▌▐█ ▀█ ▀▄ █·•█▌▐█▪█·█▌▀▄.▀·▐█ ▌▪
+//! ▐█▌▐█▪▄█▀▀█ ▐▀▀▄ ▐█▐▐▌▐█▐█•▐▀▀▪▄██ ▄▄
+//!  ▐█▀·.▐█ ▪▐▌▐█•█▌██▐█▌ ███ ▐█▄▄▌▐███▌
+//!   ▀ •  ▀  ▀ .▀  ▀▀▀ █▪. ▀   ▀▀▀ ·▀▀▀ 
 const std = @import("std");
 
 /// Row-major
@@ -139,8 +139,8 @@ pub const Matrix44 = extern struct {
         return mat;
     }
 
-    /// (col0 * col.x) + (col1 * col.y) + (col2 * col.z) + (col3 * col.w)
     pub fn matmul(self: Self, other: Self) Self {
+        // ~ 17.25 cycles on ryzen 3800xt
         var result: Self = undefined;
         const a = self.v_4x4();
         const b = other.v_4x4();
@@ -269,7 +269,10 @@ pub const Vector3 = extern struct {
     /// > 0 -> acute angle
     /// = 0 -> 90 degrees
     /// < 0 -> obtuse angle
-    pub fn dot(self: Self, other: Self) f32 { return self.mul(other).sum(); }
+    pub fn dot(self: Self, other: Self) f32 {
+        // ~ 2.85 cycles on ryzen 3800xt
+        return self.mul(other).sum();
+    }
 
     /// Magnitude of a
     pub fn len(self: Self) f32 { return @sqrt(self.mul(self).sum()); }
@@ -307,6 +310,7 @@ pub const Vector3 = extern struct {
     pub fn dist_squared(self: Self, other: Self) f32 { return other.sub(self).len_squared(); }
 
     pub fn cross(self: Self, other: Self) Self {
+        // ~ 9.16 cycles on ryzen 3800xt
         return sub(
             mul(self.swizzle("yzx"), other.swizzle("zxy")),
             mul(self.swizzle("zxy"), other.swizzle("yzx"))

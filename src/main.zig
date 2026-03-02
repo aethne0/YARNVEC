@@ -6,7 +6,7 @@ const rl = @cImport({
 });
 
 const V3 = @import("root.zig").Vector3;
-// const M44 = @import("root.zig").Matrix44;
+const M44 = @import("root.zig").Matrix44;
 
 pub const FastPrng = struct {
     s: [4]u32,
@@ -31,6 +31,15 @@ pub const FastPrng = struct {
         return @as(f32, @floatFromInt(result)) * 2.3283064e-10;
     }
 };
+
+fn random_m44(rng: *FastPrng) M44 {
+    return M44.init([_]f32{
+        rng.nextFloat(), rng.nextFloat(), rng.nextFloat(), rng.nextFloat(), 
+        rng.nextFloat(), rng.nextFloat(), rng.nextFloat(), rng.nextFloat(), 
+        rng.nextFloat(), rng.nextFloat(), rng.nextFloat(), rng.nextFloat(), 
+        rng.nextFloat(), rng.nextFloat(), rng.nextFloat(), rng.nextFloat(),
+    });
+}
 
 fn rdtsc() u32 {
     return asm volatile ("rdtsc" : [low] "={eax}" (-> u32));
@@ -78,6 +87,7 @@ pub fn main(_: std.process.Init) !void {
         std.debug.print("{:.2} μs\n", .{dur_us});
         std.debug.print("{:.2} ns per op\n", .{perop});
         const float_op_cnt: f64 = @floatFromInt(end_cycles - start_cycles);
+        std.debug.print("{} cycles\n", .{ float_op_cnt });
         std.debug.print("{:.2} cycles per op\n", .{ float_op_cnt / (count / 2)});
     }
 
@@ -120,6 +130,50 @@ pub fn main(_: std.process.Init) !void {
         std.debug.print("{:.2} μs\n", .{dur_us});
         std.debug.print("{:.2} ns per op\n", .{perop});
         const float_op_cnt: f64 = @floatFromInt(end_cycles - start_cycles);
+        std.debug.print("{} cycles\n", .{ float_op_cnt });
+        std.debug.print("{:.2} cycles per op\n", .{ float_op_cnt / count});
+    }
+
+    // mat
+    {
+        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        defer _ = gpa.deinit();
+        const allocator = gpa.allocator();
+
+        const data = try allocator.alloc(M44, count);
+        defer allocator.free(data);
+
+        var rng = FastPrng.init(0);
+
+        for (data) |*item| {
+            item.* = random_m44(&rng);
+        }
+
+        var acc_mat = M44.IDENTITY;
+
+        var t: std.Io.Threaded = .init_single_threaded;
+        var start = std.Io.Clock.real.now(t.io());
+
+        std.debug.print("\nmatmul...\n", .{});
+        const start_cycles = rdtsc();
+
+        for (data) |mat| {
+            acc_mat = acc_mat.matmul(mat);
+        }
+
+        const end_cycles = rdtsc();
+
+        const end = std.Io.Clock.real.now(t.io());
+        const dur_ns: f32 = @floatFromInt(start.durationTo(end).nanoseconds);
+        const dur_us = dur_ns / std.time.ns_per_us;
+        const perop = dur_ns / count;
+
+
+        std.debug.print("RESULT: {any}\n", .{acc_mat});
+        std.debug.print("{:.2} μs\n", .{dur_us});
+        std.debug.print("{:.2} ns per op\n", .{perop});
+        const float_op_cnt: f64 = @floatFromInt(end_cycles - start_cycles);
+        std.debug.print("{} cycles\n", .{ float_op_cnt });
         std.debug.print("{:.2} cycles per op\n", .{ float_op_cnt / count});
     }
 
