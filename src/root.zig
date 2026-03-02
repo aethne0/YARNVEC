@@ -3,13 +3,25 @@
 //! ▐█▌▐█▪▄█▀▀█ ▐▀▀▄ ▐█▐▐▌▐█▐█•▐▀▀▪▄██ ▄▄
 //!  ▐█▀·.▐█ ▪▐▌▐█•█▌██▐█▌ ███ ▐█▄▄▌▐███▌
 //!   ▀ •  ▀  ▀ .▀  ▀▀▀ █▪. ▀   ▀▀▀ ·▀▀▀ 
+//!
+//! **YARNVEC** is a vector/matrix/game math SIMD library
+//!
+//! *Maintainer*:   github.com/aethne0 
+//! *Version*:      0.0.1
+//! *Date*:         2026-03-02
+//! *License*:      Apache | MIT
+//!
+//! https://github.com/aethne0/YARNVEC
+//! Please make an issue for any bugs, performance optimizations, or 
+//! if you can point to a faster implementation of any math functions.
+
 const std = @import("std");
 
-/// Row-major
+/// Column-major 4x4 f32 matrix
 pub const Matrix44 = extern struct {
     const Self = @This();
 
-    // Layout wise this is a [4]@Vector(4, f32)
+    // Layout wise this is a `@Vector(16, f32)` or `[4]@Vector(4, f32)`
     v00: f32 align(64), v10: f32, v20: f32, v30: f32,
     v01: f32,           v11: f32, v21: f32, v31: f32,
     v02: f32,           v12: f32, v22: f32, v32: f32,
@@ -326,3 +338,9 @@ pub const Vector3 = extern struct {
         return other.mul_scalar( self.dot(other) / b_len_squared );
     }
 };
+
+
+test "haha" {
+    std.debug.print("yooo\n", .{});
+}
+

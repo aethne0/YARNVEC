@@ -7,6 +7,7 @@ const rl = @cImport({
 
 const V3 = @import("root.zig").Vector3;
 const M44 = @import("root.zig").Matrix44;
+const yv = @import("root.zig");
 
 pub const FastPrng = struct {
     s: [4]u32,
@@ -149,16 +150,17 @@ pub fn main(_: std.process.Init) !void {
             item.* = random_m44(&rng);
         }
 
-        var acc_mat = M44.IDENTITY;
+        var acc_mat = M44.ONE;
 
         var t: std.Io.Threaded = .init_single_threaded;
         var start = std.Io.Clock.real.now(t.io());
 
-        std.debug.print("\nmatmul...\n", .{});
+        std.debug.print("\nadd->transpose...\n", .{});
         const start_cycles = rdtsc();
 
         for (data) |mat| {
-            acc_mat = acc_mat.matmul(mat);
+            acc_mat = acc_mat.add(mat);
+            acc_mat = acc_mat.transpose();
         }
 
         const end_cycles = rdtsc();
@@ -168,8 +170,8 @@ pub fn main(_: std.process.Init) !void {
         const dur_us = dur_ns / std.time.ns_per_us;
         const perop = dur_ns / count;
 
-
-        std.debug.print("RESULT: {any}\n", .{acc_mat});
+        std.debug.print("RESULT:\n", .{}); 
+        acc_mat.print();
         std.debug.print("{:.2} μs\n", .{dur_us});
         std.debug.print("{:.2} ns per op\n", .{perop});
         const float_op_cnt: f64 = @floatFromInt(end_cycles - start_cycles);
