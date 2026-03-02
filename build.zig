@@ -28,7 +28,7 @@ pub fn build(b: *std.Build) void {
     // to our consumers. We must give it a name because a Zig package can expose
     // multiple modules and consumers will need to be able to specify which
     // module they want to access.
-    const mod = b.addModule("zphys", .{
+    const mod = b.addModule("YARNVEC", .{
         // The root source file is the "entry point" of this module. Users of
         // this module will only be able to access public declarations contained
         // in this file, which means that if you have declarations that you
@@ -58,7 +58,7 @@ pub fn build(b: *std.Build) void {
     // If neither case applies to you, feel free to delete the declaration you
     // don't need and to put everything under a single module.
     const exe = b.addExecutable(.{
-        .name = "zphys",
+        .name = "YARNVEC",
         .root_module = b.createModule(.{
             // b.createModule defines a new module just like b.addModule but,
             // unlike b.addModule, it does not expose the module to consumers of
@@ -73,20 +73,15 @@ pub fn build(b: *std.Build) void {
             // List of modules available for import in source files part of the
             // root module.
             .imports = &.{
-                // Here "zphys" is the name you will use in your source code to
-                // import this module (e.g. `@import("zphys")`). The name is
+                // Here "YARNVEC" is the name you will use in your source code to
+                // import this module (e.g. `@import("YARNVEC")`). The name is
                 // repeated because you are allowed to rename your imports, which
                 // can be extremely useful in case of collisions (which can happen
                 // importing modules from different packages).
-                .{ .name = "zphys", .module = mod },
+                .{ .name = "YARNVEC", .module = mod },
             },
         }),
     });
-
-    exe.root_module.link_libc = true;
-    exe.root_module.linkSystemLibrary("raylib", .{});
-    exe.use_llvm = true;
-    exe.use_lld = true;
 
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
@@ -158,37 +153,4 @@ pub fn build(b: *std.Build) void {
     //
     // Lastly, the Zig build system is relatively simple and self-contained,
     // and reading its source code will allow you to master it.
-    const exe_check = b.addExecutable(.{
-        .name = "zphys",
-        .root_module = b.createModule(.{
-            // b.createModule defines a new module just like b.addModule but,
-            // unlike b.addModule, it does not expose the module to consumers of
-            // this package, which is why in this case we don't have to give it a name.
-            .root_source_file = b.path("src/main.zig"),
-            // Target and optimization levels must be explicitly wired in when
-            // defining an executable or library (in the root module), and you
-            // can also hardcode a specific target for an executable or library
-            // definition if desireable (e.g. firmware for embedded devices).
-            .target = target,
-            .optimize = optimize,
-            // List of modules available for import in source files part of the
-            // root module.
-            .imports = &.{
-                // Here "zphys" is the name you will use in your source code to
-                // import this module (e.g. `@import("zphys")`). The name is
-                // repeated because you are allowed to rename your imports, which
-                // can be extremely useful in case of collisions (which can happen
-                // importing modules from different packages).
-                .{ .name = "zphys", .module = mod },
-            },
-        }),
-    });
-
-    exe_check.root_module.link_libc = true;
-    exe_check.root_module.linkSystemLibrary("raylib", .{});
-    exe_check.use_llvm = true;
-    exe_check.use_lld = true;
-
-    const check = b.step("check", "Check if foo compiles");
-    check.dependOn(&exe_check.step);
 }
