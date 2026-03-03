@@ -18,3 +18,5 @@ zig-pkg/
 /build-*/
 /docgen_tmp/
 .session.vim
+libroot.a
+docs/

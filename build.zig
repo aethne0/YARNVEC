@@ -12,6 +12,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    mod.addCSourceFile(.{
+        .file = b.path("src/intrin.c"),
+        .flags = &.{"-msse4.1"},
+    });
+    mod.link_libc = true;
+
     // 2. Main Library Artifact
     // Users who run 'zig build' will get this.
     const lib = b.addLibrary(.{
@@ -26,6 +32,9 @@ pub fn build(b: *std.Build) void {
     // Allows 'zig build test' to work.
     const unit_tests = b.addTest(.{
         .root_module = mod,
+
+        .use_llvm = true, // non-llvm backend doesnt seem to reason correctly about feature flags
+        .use_lld = true,
     });
 
     const run_unit_tests = b.addRunArtifact(unit_tests);

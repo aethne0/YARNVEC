@@ -1,3 +1,4 @@
+//!  ```
 //!  ▄· ▄▌• ▌ ▄ ·.  ▄▄▄· ▄▄▄▄▄ ▄ .▄
 //! ▐█▪██▌·██ ▐███▪▐█ ▀█ •██  ██▪▐█
 //! ▐█▌▐█▪▐█ ▌▐▌▐█·▄█▀▀█  ▐█.▪██▀▐█
@@ -14,6 +15,7 @@
 //! https://codeberg.org/yarnf/ymath
 //! Please make an issue for any bugs, performance optimizations, or 
 //! if you can point to a faster implementation of any math functions.
+//!   ```
 
 const vec2 = @import("vector_2.zig");
 /// 2-dimensional f32 vector
@@ -48,5 +50,7 @@ pub const Mat4f64 = mat4.Mat4(f64);
 pub const Mat4f128 = mat4.Mat4(f128);
 
 const std = @import("std");
-test { std.testing.refAllDecls(@This()); }
+test { 
+    std.testing.refAllDecls(@This()); 
+}
 
