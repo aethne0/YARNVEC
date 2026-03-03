@@ -99,8 +99,6 @@ pub fn Vector3A(comptime FType: type) type {
 
         /// Element-wise divide
         pub fn div(self: Self, other: Self) Self {
-            @setRuntimeSafety(false);
-            @setFloatMode(.optimized);
             var result: Self = @bitCast(self.as_vec() / other.as_vec());
             result._pad = 0;
             return result;
@@ -191,43 +189,31 @@ pub fn Vector3A(comptime FType: type) type {
 
         /// Element-wise natural logarithm
         pub fn ln(self: Self) FType {
-            @setRuntimeSafety(false);
-            @setFloatMode(.optimized);
             return @bitCast(@log(self.as_vec()));
         }
 
         /// Element-wise base-2 logarithm
         pub fn log2(self: Self) FType {
-            @setRuntimeSafety(false);
-            @setFloatMode(.optimized);
             return @bitCast(@log2(self.as_vec()));
         }
 
         /// Element-wise e^self
         pub fn exp(self: Self) FType {
-            @setRuntimeSafety(false);
-            @setFloatMode(.optimized);
             return @bitCast(@exp(self.as_vec()));
         }
 
         /// Element-wise 2^self
         pub fn exp2(self: Self) FType {
-            @setRuntimeSafety(false);
-            @setFloatMode(.optimized);
             return @bitCast(@exp2(self.as_vec()));
         }
 
         /// Element-wise reciprocal (1/x)
         pub fn recip(self: Self) FType {
-            @setRuntimeSafety(false);
-            @setFloatMode(.optimized);
             return ONE.div(self);
         }
 
         /// Element-wise sqrt
         pub fn sqrt(self: Self) FType {
-            @setRuntimeSafety(false);
-            @setFloatMode(.optimized);
             return @bitCast(@sqrt(self.as_vec()));
         }
 
@@ -251,8 +237,6 @@ pub fn Vector3A(comptime FType: type) type {
             // for non-f32 sizes we have nothing else to do
             //
             // For x86 this seems to use vrsqrtps so big need to mess around.
-            @setFloatMode(.optimized);
-            @setRuntimeSafety(false);
             const one: @Vector(4, FType) = @splat(1);
             var result: @Vector(4, FType) = @bitCast(one / @sqrt(self.as_vec()));
             result[3] = 0;
@@ -343,7 +327,6 @@ pub fn Vector3A(comptime FType: type) type {
             const sqr_upper_bound = upper_bound * upper_bound;
 
             if (sqr_length > sqr_upper_bound) {
-                @setFloatMode(.optimized);
                 return self.mul_scalar(upper_bound / @sqrt(sqr_length));
             } else {
                 return self;
@@ -361,7 +344,6 @@ pub fn Vector3A(comptime FType: type) type {
             const sqr_lower_bound = lower_bound * lower_bound;
 
             if (sqr_length < sqr_lower_bound) {
-                @setFloatMode(.optimized);
                 return self.mul_scalar(lower_bound / @sqrt(sqr_length));
             } else {
                 return self;
@@ -381,7 +363,6 @@ pub fn Vector3A(comptime FType: type) type {
         /// Scales vector so that length is `len`, does not affect direction. `len` must be >= 0;
         pub fn set_length(self: Self, len: FType) Self {
             if (len < 0) std.debug.panic("length cannot be < 0", .{});
-            @setFloatMode(.optimized);
             return self.mul_scalar(len / self.length_recip());
         }
 
@@ -395,7 +376,6 @@ pub fn Vector3A(comptime FType: type) type {
         /// Distance from self -> other
         /// When called as a method you can read this as "distanceTo"
         pub fn distance(self: Self, other: Self) FType {
-            @setFloatMode(.optimized);
             return @sqrt(distance(self, other));
         }
 
@@ -565,7 +545,6 @@ test "swoz" {
 }
 
 test "unlabeled_chungus_test" {
-
     var asd = Vec3A.Y.neg().mul_scalar(100);
     _ = asd.swizzle("zyx").cross(Vec3A.X).normalize();
     asd = asd.swizzle("zyx").add(Vec3A.X).add(Vec3A.ONE);

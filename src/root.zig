@@ -17,6 +17,11 @@
 //! if you can point to a faster implementation of any math functions.
 //!   ```
 
+
+comptime {
+   @setFloatMode(.optimized);
+}
+
 const vec2 = @import("vector_2.zig");
 /// 2-dimensional f32 vector
 pub const Vec2  = vec2.Vector2(f32);
