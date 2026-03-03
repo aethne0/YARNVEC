@@ -1,21 +1,19 @@
-//!  ▄· ▄▌ ▄▄▄· ▄▄▄   ▐ ▄  ▌ ▐·▄▄▄ . ▄▄· 
-//! ▐█▪██▌▐█ ▀█ ▀▄ █·•█▌▐█▪█·█▌▀▄.▀·▐█ ▌▪
-//! ▐█▌▐█▪▄█▀▀█ ▐▀▀▄ ▐█▐▐▌▐█▐█•▐▀▀▪▄██ ▄▄
-//!  ▐█▀·.▐█ ▪▐▌▐█•█▌██▐█▌ ███ ▐█▄▄▌▐███▌
-//!   ▀ •  ▀  ▀ .▀  ▀▀▀ █▪. ▀   ▀▀▀ ·▀▀▀ 
+//!  ▄· ▄▌• ▌ ▄ ·.  ▄▄▄· ▄▄▄▄▄ ▄ .▄
+//! ▐█▪██▌·██ ▐███▪▐█ ▀█ •██  ██▪▐█
+//! ▐█▌▐█▪▐█ ▌▐▌▐█·▄█▀▀█  ▐█.▪██▀▐█
+//!  ▐█▀·.██ ██▌▐█▌▐█ ▪▐▌ ▐█▌·██▌▐▀
+//!   ▀ • ▀▀  █▪▀▀▀ ▀  ▀  ▀▀▀ ▀▀▀ ·
 //!
-//! **YARNVEC** is a vector/matrix/game math SIMD library
+//! **YMATH** is a vector/matrix/game math SIMD library
 //!
 //! *Maintainer*:   github.com/aethne0 
 //! *Version*:      0.0.1
 //! *Date*:         2026-03-02
 //! *License*:      Apache
 //!
-//! https://github.com/aethne0/YARNVEC
+//! https://codeberg.org/yarnf/ymath
 //! Please make an issue for any bugs, performance optimizations, or 
 //! if you can point to a faster implementation of any math functions.
-
-const std = @import("std");
 
 const vec2 = @import("vector_2.zig");
 /// 2-dimensional f32 vector
@@ -49,5 +47,6 @@ pub const Mat4f64 = mat4.Mat4(f64);
 /// 4x4 f128 matrix
 pub const Mat4f128 = mat4.Mat4(f128);
 
+const std = @import("std");
 test { std.testing.refAllDecls(@This()); }
 

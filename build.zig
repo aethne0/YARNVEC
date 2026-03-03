@@ -4,9 +4,9 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // 1. Define the YARNVEC module. 
+    // 1. Define the ymath module. 
     // This is the source-of-truth for your library.
-    const mod = b.addModule("yarnvec", .{
+    const mod = b.addModule("ymath", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
     // 2. Main Library Artifact
     // Users who run 'zig build' will get this.
     const lib = b.addLibrary(.{
-        .name = "yarnvec",
+        .name = "ymath",
         .root_module = mod,
     });
 
@@ -35,7 +35,7 @@ pub fn build(b: *std.Build) void {
     // 4. The 'check' Step
     // This is what ZLS / LSP uses to verify code without building binaries.
     // We use b.addTest because it analyzes all 'test' blocks too.
-    const check = b.step("check", "Check if yarnvec compiles");
+    const check = b.step("check", "Check if ymath compiles");
     const check_artifact = b.addTest(.{
         .root_module = mod,
     });
