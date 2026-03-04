@@ -131,7 +131,7 @@ pub fn Vector3A(comptime FType: type) type {
         /// Clamps each element to [lower_bound, upper_bound]
         /// Note: This is not gauranteed to observe IEEE 754.
         /// on x86_64 it will probably emit `vmaxps`/`vminps` which do not.
-        pub fn clamp_by_scalars(self: Self, lower_bound: FType, upper_bound: FType) Self {
+        pub fn clampByScalars(self: Self, lower_bound: FType, upper_bound: FType) Self {
             if (lower_bound > upper_bound)
                 std.debug.panic(
                     \\ called clamp with lower_bound > upper_bound:
@@ -198,7 +198,7 @@ pub fn Vector3A(comptime FType: type) type {
         // TODO: doc
         /// Takes vector projection of `self` onto `other`
         /// returns ZERO vector if `other` length is zero!
-        pub fn project_or_zero(self: Self, other: Self) Self {
+        pub fn projectOrZero(self: Self, other: Self) Self {
             const other_length_squared = other.length_squared();
             if (other_length_squared == 0) return ZERO;
             return other.mul_scalar(self.dot(other) / other_length_squared);
@@ -227,7 +227,7 @@ pub fn Vector3A(comptime FType: type) type {
         }
 
         // TODO: doc
-        pub fn angle_between(self: Self, other: Self) FType {
+        pub fn angleBetween(self: Self, other: Self) FType {
             // TODO: make approx acos
             std.math.acos(
                 self.dot(other) / @sqrt(self.length_squared() * other.length_squared())
@@ -236,7 +236,7 @@ pub fn Vector3A(comptime FType: type) type {
 
         // TODO: doc
         // todo: perf
-        pub fn rotate_x(self: Self, angle: FType) Self {
+        pub fn rotateX(self: Self, angle: FType) Self {
             const sin_angle = @sin(angle);
             const cos_angle = @cos(angle);
 
@@ -249,7 +249,7 @@ pub fn Vector3A(comptime FType: type) type {
 
         // TODO: doc
         // todo: perf
-        pub fn rotate_y(self: Self, angle: FType) Self {
+        pub fn rotateY(self: Self, angle: FType) Self {
             const sin_angle = @sin(angle);
             const cos_angle = @cos(angle);
 
@@ -262,7 +262,7 @@ pub fn Vector3A(comptime FType: type) type {
 
         // TODO: doc
         // todo: perf
-        pub fn rotate_z(self: Self, angle: FType) Self {
+        pub fn rotateZ(self: Self, angle: FType) Self {
             const sin_angle = @sin(angle);
             const cos_angle = @cos(angle);
 
@@ -292,24 +292,24 @@ pub fn Vector3A(comptime FType: type) type {
         }
 
         /// min of all elements
-        pub fn min_element(self: Self) FType {
+        pub fn minElement(self: Self) FType {
             return @reduce(.Min, self.as_vec_3());
         }
 
         /// max of all elements
-        pub fn max_element(self: Self) FType {
+        pub fn maxElement(self: Self) FType {
             return @reduce(.Max, self.as_vec_3());
         }
 
         /// Constructs a Vec2 of the same float-type by truncating - discarding z
-        pub fn to_vec2_truncate(self: Self) V2Type {
+        pub fn toVec2Truncate(self: Self) V2Type {
             return @bitCast(
                 @shuffle(FType, self.as_vec(), undefined, @Vector(2, FType){0, 1})
             );
         }
 
         /// Constructs a Vec4 of the same float-type with zero as the new w component - { x, y, z, 0 }
-        pub fn to_vec4_zero_extend(self: Self) V4Type {
+        pub fn toVec4ZeroExtend(self: Self) V4Type {
             std.debug.assert(self._pad == 0);
             return @bitCast(
                 @shuffle(FType, self.as_vec(), undefined, VType{0, 1, 2, 3})
@@ -351,7 +351,7 @@ fn Vec3ATests (FType: type) type {
         }
 
         test "clamp_by_scalars" {
-            var a = VType.init(0, 1, 2).clamp_by_scalars(0.5, 1.5);
+            var a = VType.init(0, 1, 2).clampByScalars(0.5, 1.5);
             try t.expectEqual(0.5, a.x);
             try t.expectEqual(1.0, a.y);
             try t.expectEqual(1.5, a.z);
@@ -369,13 +369,13 @@ fn Vec3ATests (FType: type) type {
             var asd = VType.Y.neg().mulByScalar(100);
             _ = asd.swizzle("zyx").cross(VType.X).normalize();
             asd = asd.swizzle("zyx").add(VType.X).add(VType.ONE);
-            _ = asd.to_vec4_zero_extend();
-            _ = asd.to_vec2_truncate();
+            _ = asd.toVec4ZeroExtend();
+            _ = asd.toVec2Truncate();
             try t.expectEqual(2, asd.x);
             try t.expectEqual(-99, asd.y);
             try t.expectEqual(1, asd.z);
 
-            var a = VType.init(0, 1, 2).clamp_by_scalars(0.5, 1.5);
+            var a = VType.init(0, 1, 2).clampByScalars(0.5, 1.5);
             try t.expectEqual(0.5, a.x);
             try t.expectEqual(1.0, a.y);
             try t.expectEqual(1.5, a.z);
