@@ -1,11 +1,14 @@
 const std = @import("std");
+// -O ReleaseFast -target aarch64-linux-gnu -mcpu cortex_a55
+// -O ReleaseFast -mcpu znver2
+//
 
 pub fn Vector3A(comptime FType: type) type {
     const V2Type = @import("vector_2.zig").Vector2(FType);
     const V4Type = @import("vector_4.zig").Vector4(FType);
     const RawType = switch (FType) { 
-        f32 => u128, f64 => u256, f128 => u512,
-        else => @compileError("FType must be f32 | f64 | f128"),
+        f32 => u128, f64 => u256,
+        else => @compileError("FType must be f32 | f64"),
     };
 
     return extern struct {
@@ -149,6 +152,19 @@ pub fn Vector3A(comptime FType: type) type {
 
         /// Product of all elements
         pub fn product(self: Self) FType {
+            // todo: perf
+            // glam uses some slick shuffling to do this but this seems to emit better for x86_64 and aarch64
+            // https://docs.rs/glam/0.32.0/src/glam/f32/sse2/vec3a.rs.html#418
+            // https://godbolt.org/z/W4v8oYWx9
+            // When we try to recreate this through @builtins we get quite a suboptimal result
+            // https://godbolt.org/z/Wh8W6EEn1
+            //
+            // The below method of "casting out" the pad element gives a pretty good result, better
+            // than trying to use @builtins, but ill have to benchmark it against the asm of the glam
+            // version. 
+            //
+            // This will be a similar case for a lot of these operations where the pad element would
+            // screw up the result (min/max/product).
             return @reduce(.Mul, self.as_vec_3());
         }
 
@@ -268,13 +284,33 @@ pub fn Vector3A(comptime FType: type) type {
         /// Clamps each element to [lower_bound, upper_bound]
         /// Note: This is not gauranteed to observe IEEE 754.
         /// on x86_64 it will probably emit `vmaxps`/`vminps` which do not.
-        pub fn clamp(self: Self, lower_bound: FType, upper_bound: FType) Self {
-            if (lower_bound > upper_bound) std.debug.panic("called clamp with lower_bound > upper_bound", .{});
+        pub fn clamp_by_scalars(self: Self, lower_bound: FType, upper_bound: FType) Self {
+            if (lower_bound > upper_bound)
+                std.debug.panic(
+                    \\ called clamp with lower_bound > upper_bound:
+                    \\ lower: {any}, upper: {any}
+                    , .{lower_bound, upper_bound});
 
             var res = self.as_vec();
             res = @min(res, splat(upper_bound).as_vec());
             res = @max(res, splat(lower_bound).as_vec());
+            res[3] = 0;
             return @bitCast(res);
+        }
+
+        /// Element-wise clamp
+        /// Note: This is not gauranteed to observe IEEE 754.
+        /// on x86_64 it will probably emit `vmaxps`/`vminps` which do not.
+        pub fn clamp(self: Self, lower_bound: Self, upper_bound: Self) Self {
+            std.debug.assert(lower_bound._pad == 0);
+            std.debug.assert(upper_bound._pad == 0);
+            if (!@reduce(.And, upper_bound.as_vec() >= lower_bound.as_vec()))
+                std.debug.panic(
+                    \\ called clamp with lower_bound > upper_bound (for one or more elements):
+                    \\ lower: {any}, upper: {any}
+                    , .{lower_bound, upper_bound});
+            
+            return self.min(upper_bound).max(lower_bound);
         }
 
         /// Returns vector with the sign of each element, represented as -1.0 / 0 / 1.0
@@ -299,7 +335,7 @@ pub fn Vector3A(comptime FType: type) type {
         /// Element-wise clamp from [0, 1]
         pub fn saturate(self: Self) Self {
             // todo: perf maybe
-            return self.clamp(0, 1);
+            return self.clamp(ZERO, ONE);
         }
 
         /// Square of the length of the vector, skips computing sqrt
@@ -410,7 +446,11 @@ pub fn Vector3A(comptime FType: type) type {
             if (len == 0) return self.ZERO;
             return self.div_scalar(len);
         }
-        
+
+        pub fn is_normalized(self: Self) Self {
+            return @abs(self.length_squared() - 1) <= std.math.floatEpsAt(FType, 1);
+        }
+
         /// Example:
         /// ```zig
         /// const a = Vec3A.init(1, 2, 3);
@@ -447,12 +487,82 @@ pub fn Vector3A(comptime FType: type) type {
             return other.mul_scalar(self.dot(other) / other_length_squared);
         }
 
+        // TODO: doc
         /// Takes vector projection of `self` onto `other`
         /// returns ZERO vector if `other` length is zero!
         pub fn project_or_zero(self: Self, other: Self) Self {
             const other_length_squared = other.length_squared();
             if (other_length_squared == 0) return ZERO;
             return other.mul_scalar(self.dot(other) / other_length_squared);
+        }
+
+        pub fn reflect(self: Self, normal: Self) Self {
+            if (!normal.is_normalized()) std.debug.panic("normal must be normalized (length=1)\n", .{});
+            return self.sub(normal.mul_scalar(2 * self.dot(normal)));
+        }
+
+        // TODO: doc
+        // PANICS if self isnt normalized
+        // PANICS if normal isnt normalized
+        pub fn refract(self: Self, normal: Self, eta: FType) Self {
+            if (!self.is_normalized()) std.debug.panic("self must be normalized (length=1)\n", .{});
+            if (!normal.is_normalized()) std.debug.panic("normal must be normalized (length=1)\n", .{});
+
+            // TODO: check this cause i dont even know what it does
+            const n_dot_i = normal.dot(self);
+            const k = 1 - eta * eta * (1 - n_dot_i * n_dot_i);
+            if (k >= 0) {
+                return self.mul_scalar(eta).sub(normal.mul_scalar(eta * n_dot_i + @sqrt(k)));
+            } else {
+                return ZERO;
+            }
+        }
+
+        // TODO: doc
+        pub fn angle_between(self: Self, other: Self) FType {
+            // TODO: make approx acos
+            std.math.acos(
+                self.dot(other) / @sqrt(self.length_squared() * other.length_squared())
+            );
+        }
+
+        // TODO: doc
+        // todo: perf
+        pub fn rotate_x(self: Self, angle: FType) Self {
+            const sin_angle = @sin(angle);
+            const cos_angle = @cos(angle);
+
+            return init(
+                self.x,
+                self.y * cos_angle - self.z * sin_angle,
+                self.y * sin_angle + self.z * cos_angle,
+            );
+        }
+
+        // TODO: doc
+        // todo: perf
+        pub fn rotate_y(self: Self, angle: FType) Self {
+            const sin_angle = @sin(angle);
+            const cos_angle = @cos(angle);
+
+            return init(
+                self.x * cos_angle + self.z * sin_angle,
+                self.y,
+                self.z * cos_angle - self.x * sin_angle 
+            );
+        }
+
+        // TODO: doc
+        // todo: perf
+        pub fn rotate_z(self: Self, angle: FType) Self {
+            const sin_angle = @sin(angle);
+            const cos_angle = @cos(angle);
+
+            return init(
+                self.x * cos_angle - self.y * sin_angle,
+                self.x * sin_angle - self.y * cos_angle ,
+                self.z,
+            );
         }
 
         /// Linearly interpolates between `self` and `other`
@@ -469,6 +579,14 @@ pub fn Vector3A(comptime FType: type) type {
         /// Should give same result as `self.lerp(other, 0.5)`
         pub fn midpoint(self: Self, other: Self) Self {
             return add(self, other).div_scalar(2);
+        }
+
+        /// Spherical interpolation
+        pub fn slerp(self: Self, other: Self, s: FType) Self {
+            _ = self;
+            _ = other;
+            _ = s;
+            std.debug.panic("unimplemented", .{});
         }
 
         /// Constructs a Vec2 of the same float-type by truncating - discarding z
@@ -529,8 +647,21 @@ pub const Vec3Af128 = Vector3A(f128);
 
 const t = std.testing;
 
+
+test "accept_div_by_zero" {
+    _ = Vec3A.ONE.div(Vec3A.ZERO);
+}
+
 test "clamp" {
-    var a = Vec3A.init(0, 1, 2).clamp(0.5, 1.5);
+    var a = Vec3A.init(0, 1, 2).clamp(Vec3A.ZERO, Vec3A.ONE);
+    try t.expectEqual(0.0, a.x);
+    try t.expectEqual(1.0, a.y);
+    try t.expectEqual(1.0, a.z);
+    try t.expectEqual(0, a._pad);
+}
+
+test "clamp_by_scalars" {
+    var a = Vec3A.init(0, 1, 2).clamp_by_scalars(0.5, 1.5);
     try t.expectEqual(0.5, a.x);
     try t.expectEqual(1.0, a.y);
     try t.expectEqual(1.5, a.z);
@@ -554,7 +685,7 @@ test "unlabeled_chungus_test" {
     try t.expectEqual(-99, asd.y);
     try t.expectEqual(1, asd.z);
 
-    var a = Vec3A.init(0, 1, 2).clamp(0.5, 1.5);
+    var a = Vec3A.init(0, 1, 2).clamp_by_scalars(0.5, 1.5);
     try t.expectEqual(0.5, a.x);
     try t.expectEqual(1.0, a.y);
     try t.expectEqual(1.5, a.z);
