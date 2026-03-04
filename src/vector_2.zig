@@ -92,6 +92,7 @@ pub fn Vector2(comptime FType: type) type {
         pub const eq = shared.eq;
         pub const clampByScalars = shared.clampByScalars;
         pub const clamp = shared.clamp;
+        pub const dot = shared.dot;
 
     };
 }

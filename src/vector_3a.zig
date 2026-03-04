@@ -4,11 +4,11 @@ const vector_common = @import("vector_common.zig");
 pub fn Vector3A(comptime FType: type) type {
     if (FType != f32 and FType != f64) @compileError("fType must be f32 | f64");
 
-    const BitsType = if (FType == f32) u128 else u256;
+    const BitsType = if (FType == f32) u96 else u192;
     const V2Type = @import("vector_2.zig").Vector2(FType);
     const V4Type = @import("vector_4.zig").Vector4(FType);
 
-    const VType = @Vector(4, FType);
+    const VRawType = @Vector(4, FType);
 
     return extern struct {
         const Self = @This();
@@ -106,20 +106,18 @@ pub fn Vector3A(comptime FType: type) type {
 
         /// Element-wise bitwise equality
         pub fn eq(self: Self, other: Self) bool {
-            std.debug.assert(self._pad == 0);
-            std.debug.assert(other._pad == 0);
-
             // reference:
             // const result = erch.x86._mm_add_ps(self.as_vec(), other.as_vec());
             // return 0 != arch.x86._mm_testz_ps(result, result);
 
-            return @as(BitsType, @bitCast(self.as_vec())) == @as(BitsType, @bitCast(other.as_vec()));
+            // todo: perf
+            const left = @as(BitsType, @bitCast(self.as_vec_3()));
+            const right = @as(BitsType, @bitCast(other.as_vec_3()));
+            return left == right;
         }
 
         /// Computes dot product with another vector
         pub fn dot(self: Self, other: Self) FType {
-            std.debug.assert(self._pad == 0);
-            std.debug.assert(other._pad == 0);
             return self.mul(other).sum();
         }
 
@@ -149,9 +147,8 @@ pub fn Vector3A(comptime FType: type) type {
         /// Note: This is not gauranteed to observe IEEE 754.
         /// on x86_64 it will probably emit `vmaxps`/`vminps` which do not.
         pub fn clamp(self: Self, lower_bound: Self, upper_bound: Self) Self {
-            std.debug.assert(lower_bound._pad == 0);
-            std.debug.assert(upper_bound._pad == 0);
-            if (!@reduce(.And, upper_bound.as_vec() >= lower_bound.as_vec()))
+            // todo: perf
+            if (!@reduce(.And, upper_bound.as_vec_3() >= lower_bound.as_vec_3()))
                 std.debug.panic(
                     \\ called clamp with lower_bound > upper_bound (for one or more elements):
                     \\ lower: {any}, upper: {any}
@@ -234,9 +231,9 @@ pub fn Vector3A(comptime FType: type) type {
             );
         }
 
-        // TODO: doc
-        // todo: perf
+        /// Rotates self about the X axis by `angle` (radians)
         pub fn rotateX(self: Self, angle: FType) Self {
+            // todo: perf
             const sin_angle = @sin(angle);
             const cos_angle = @cos(angle);
 
@@ -247,9 +244,9 @@ pub fn Vector3A(comptime FType: type) type {
             );
         }
 
-        // TODO: doc
-        // todo: perf
+        /// Rotates self about the Y axis by `angle` (radians)
         pub fn rotateY(self: Self, angle: FType) Self {
+            // todo: perf
             const sin_angle = @sin(angle);
             const cos_angle = @cos(angle);
 
@@ -260,9 +257,9 @@ pub fn Vector3A(comptime FType: type) type {
             );
         }
 
-        // TODO: doc
-        // todo: perf
+        /// Rotates self about the Z axis by `angle` (radians)
         pub fn rotateZ(self: Self, angle: FType) Self {
+            // todo: perf
             const sin_angle = @sin(angle);
             const cos_angle = @cos(angle);
 
@@ -310,10 +307,10 @@ pub fn Vector3A(comptime FType: type) type {
 
         /// Constructs a Vec4 of the same float-type with zero as the new w component - { x, y, z, 0 }
         pub fn toVec4ZeroExtend(self: Self) V4Type {
-            std.debug.assert(self._pad == 0);
-            return @bitCast(
-                @shuffle(FType, self.as_vec(), undefined, VType{0, 1, 2, 3})
-            );
+            // todo: perf
+            var result: VRawType = @shuffle(FType, self.as_vec(), undefined, VRawType{0, 1, 2, 3});
+            result[3] = 0;
+            return @bitCast(result);
         }
 
         // todo: extends etc once more vectors are implemented
@@ -338,6 +335,10 @@ fn Vec3ATests (FType: type) type {
     return struct  {
         const VType = Vector3A(FType);
 
+        fn expectEqualVec(expected: VType, actual: VType) !void {
+            return t.expect(VType.eq(expected, actual));
+        }
+
         test "clamp" {
             var a = VType.init(0, 1, 2).clamp(VType.ZERO, VType.ONE);
             try t.expectEqual(0.0, a.x);
@@ -351,18 +352,15 @@ fn Vec3ATests (FType: type) type {
         }
 
         test "clamp_by_scalars" {
-            var a = VType.init(0, 1, 2).clampByScalars(0.5, 1.5);
-            try t.expectEqual(0.5, a.x);
-            try t.expectEqual(1.0, a.y);
-            try t.expectEqual(1.5, a.z);
-            try t.expectEqual(0, a._pad);
+            try expectEqualVec(
+                VType.init(0.5, 1, 1.5),
+                VType.init(0, 1, 2).clampByScalars(0.5, 1.5)
+            );
         }
 
-        test "swoz" {
-            const base = VType.init(1, 2, 3);
-            const swozr = base.swizzleResize("xxy");
-            const should_be = VType.init(1, 1, 2);
-            try t.expect(swozr.eq(should_be));
+        test "swiz_resize" {
+            const swozzled = VType.init(1, 2, 3).swizzleResize("xxy");
+            try expectEqualVec(swozzled, VType.init(1, 1, 2));
         }
 
         test "chungus" {

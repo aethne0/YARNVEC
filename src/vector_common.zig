@@ -424,6 +424,11 @@ pub fn VectorAlignedCommon(comptime FType: type, Dims: comptime_int, OurType: ty
             return @reduce(.Mul, self.as_vec_3());
         }
 
+        /// Dot product
+        pub fn dot(self: Self, other: Self) FType {
+            return sum(mul(self, other));
+        }
+
         /// min of all elements
         pub fn minElement(self: Self) FType {
             return @reduce(.Min, self.as_vec_3());
